@@ -2,79 +2,108 @@
 
 namespace App\Service;
 
-use App\Repository\UtilisateurRepository;
 use App\Entity\Utilisateur;
+use App\Repository\UtilisateurRepository;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 class UtilisateurService
 {
-    public function __construct(private UtilisateurRepository $utilisateurRepository) {}
+    public function __construct(
+        private UtilisateurRepository $utilisateurRepository,
+        private UserPasswordHasherInterface $passwordHasher
+    ) {}
 
-    // Retourne tous les utilisateurs
-    public function getAllUtilisateurs(): array
+    // Vérifie si un email existe déjà
+     
+    public function emailExiste(string $email): bool
     {
-        $utilisateurs = $this->utilisateurRepository->findAll();
-        $result = [];
-        foreach ($utilisateurs as $user) {
-            $result[] = $this->formatUtilisateur($user);
-        }
-        return $result;
+        return null !== $this->utilisateurRepository->findOneBy(['email' => $email]);
     }
 
-    // Retourne un utilisateur par ID
-    public function getUtilisateurById(int $id): ?array
-    {
-        $user = $this->utilisateurRepository->find($id);
-        return $user ? $this->formatUtilisateur($user) : null;
-    }
-
-    // Retourne l'entité Utilisateur par ID (pour update/delete)
-    public function getUtilisateurEntityById(int $id): ?Utilisateur
-    {
-        return $this->utilisateurRepository->find($id);
-    }
-
-    // Crée un nouvel utilisateur à partir d'un tableau $data
+    // Création d'un utilisateur (ENTITÉ)
+    
     public function createUtilisateur(array $data): Utilisateur
     {
         $user = new Utilisateur();
         $user->setEmail($data['email']);
-        $user->setPassword($data['password']); 
-        $user->setRoles($data['roles']);
-        $user->setCreateAt(new \DateTimeImmutable());
+        $user->setRoles($data['roles'] ?? ['ROLE_USER']);
+
+        $hashedPassword = $this->passwordHasher->hashPassword(
+            $user,
+            $data['password']
+        );
+
+        $user->setPassword($hashedPassword);
+
         return $user;
     }
-    
-    // Met à jour un utilisateur existant
-    public function updateUtilisateur(Utilisateur $user, array $data): void
-    {
-    
-        $user->setEmail($data['email']);
-        $user->setPassword($data['password']); 
-        $user->setRoles($data['roles']);
-       if (isset($data['createAt'])) {
-       $user->setCreateAt(new \DateTimeImmutable($data['createAt']));
-}
-    }
-
-    public function emailExiste(string $email): bool
-    {
-     
-     $email = strtolower(trim($email));
-    
-     return $this->utilisateurRepository->findOneBy(['email' => $email]) !== null;
-    }
-    // Transforme un utilisateur en tableau pour JSON
-    public function formatUtilisateur(Utilisateur $user): array
+    // afficher tous les users
+    public function getAllUsers(): array
 {
-    return [
-        'id' => $user->getId(),
-        'email' => $user->getEmail(),
-        'password' => $user->getPassword(),
-        'roles' => $user->getRoles(),
-        'createdAt' => $user->getCreateAt()?->format('Y-m-d H:i:s'),
-    ];
+    $users = $this->utilisateurRepository->findAll();
+    $data = [];
+
+    foreach ($users as $user) {
+        $data[] = [
+            'id' => $user->getId(),
+            'email' => $user->getEmail(),
+            'roles' => $user->getRoles(),
+            'createdAt' => $user->getCreatedAt()->format('Y-m-d H:i:s'),
+        ];
+    }
+
+    return $data;
 }
 
+    public function getUtilisateurById(int $id): ?Utilisateur
+    {
+        return $this->utilisateurRepository->find($id);
+    }
+
+    public function updateUserRoles(int $id, array $roles): void
+{
+    $user = $this->utilisateurRepository->find($id);
+    $user->setRoles($roles);
+}
+    // mise à jour 
+   public function updateProfile(Utilisateur $user, array $data): ?Utilisateur
+   {
+    if (isset($data['email'])){
+        $user->setEmail($data['email']);
+    }
+    if (isset($data['password']))
+      {
+        $hashedPassword = $this->passwordHasher->hashPassword($user, $data['password']);
+        $user->setPassword($data['password']);
+      }
+       return $user;
+   }
 
 
+    //À UTILISER POUR L'AUTHENTIFICATION (ENTITÉ)
+     
+    public function getUtilisateurEntityByEmail(string $email): ?Utilisateur
+    {
+        return $this->utilisateurRepository->findOneBy(['email' => $email]);
+    }
+
+    // À UTILISER POUR LES RÉPONSES API (ARRAY)
+     
+    public function getUtilisateurByEmail(string $email): ?array
+    {
+        $user = $this->utilisateurRepository->findOneBy(['email' => $email]);
+
+        return $user ? $this->formatUtilisateur($user) : null;
+    }
+
+    // Formatage sécurisé pour l'API
+     
+    public function formatUtilisateur(Utilisateur $user): array
+    {
+        return [
+            'id' => $user->getId(),
+            'email' => $user->getEmail(),
+            'roles' => $user->getRoles(),
+        ];
+    }
 }

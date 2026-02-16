@@ -3,20 +3,19 @@
 namespace App\Entity;
 
 use App\Repository\CarRepository;
-use App\Entity\Utilisateur;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: CarRepository::class)]
+#[ORM\Table(name: 'cars')]
 class Car
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column]
+    #[ORM\Column(type: 'integer')]
     private ?int $id = null;
 
-    
     #[ORM\Column(length: 255, unique: true)]
     #[Assert\NotBlank(message: "L'immatriculation est obligatoire")]
     #[Assert\Regex(
@@ -64,13 +63,17 @@ class Car
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $observations = null;
 
-   
-     // Relation ManyToOne :
-    
+    // Relation ManyToOne
     #[Assert\NotNull(message: "L'utilisateur est obligatoire")]
-    #[ORM\ManyToOne(inversedBy: 'cars')]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\ManyToOne(targetEntity: Utilisateur::class, inversedBy: 'cars')]
+    #[ORM\JoinColumn(
+        name: 'utilisateur_id',
+        referencedColumnName: 'id',
+        nullable: false,
+        onDelete: 'CASCADE'
+    )]
     private ?Utilisateur $utilisateur = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -84,7 +87,6 @@ class Car
     public function setImmatriculation(string $immatriculation): static
     {
         $this->immatriculation = $immatriculation;
-
         return $this;
     }
 
@@ -96,7 +98,6 @@ class Car
     public function setMarque(string $marque): static
     {
         $this->marque = $marque;
-
         return $this;
     }
 
@@ -108,7 +109,6 @@ class Car
     public function setModele(string $modele): static
     {
         $this->modele = $modele;
-
         return $this;
     }
 
@@ -117,10 +117,9 @@ class Car
         return $this->annee;
     }
 
-    public function setAnnee(int $annee): static
+    public function setAnnee(?int $annee): static
     {
         $this->annee = $annee;
-
         return $this;
     }
 
@@ -132,7 +131,6 @@ class Car
     public function setCouleur(?string $couleur): static
     {
         $this->couleur = $couleur;
-
         return $this;
     }
 
@@ -144,31 +142,28 @@ class Car
     public function setEtat(string $etat): static
     {
         $this->etat = $etat;
-
         return $this;
     }
 
-    public function getDateEntree(): ?\DateTime
+    public function getDateEntree(): ?\DateTimeInterface
     {
         return $this->dateEntree;
     }
 
-    public function setDateEntree(\DateTime $dateEntree): static
+    public function setDateEntree(\DateTimeInterface $dateEntree): static
     {
         $this->dateEntree = $dateEntree;
-
         return $this;
     }
 
-    public function getDateSortie(): ?\DateTime
+    public function getDateSortie(): ?\DateTimeInterface
     {
         return $this->dateSortie;
     }
 
-    public function setDateSortie(?\DateTime $dateSortie): static
+    public function setDateSortie(?\DateTimeInterface $dateSortie): static
     {
         $this->dateSortie = $dateSortie;
-
         return $this;
     }
 
@@ -180,10 +175,10 @@ class Car
     public function setObservations(?string $observations): static
     {
         $this->observations = $observations;
-
         return $this;
     }
-     public function getUtilisateur(): ?Utilisateur
+
+    public function getUtilisateur(): ?Utilisateur
     {
         return $this->utilisateur;
     }
@@ -193,8 +188,4 @@ class Car
         $this->utilisateur = $utilisateur;
         return $this;
     }
-    
-    
-    // NotBlank garantit la présence de la donnée, Regex garantit son format.
-
 }

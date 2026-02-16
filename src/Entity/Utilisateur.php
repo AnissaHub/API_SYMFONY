@@ -7,40 +7,42 @@ use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 
 #[ORM\Entity(repositoryClass: UtilisateurRepository::class)]
-class Utilisateur
+#[ORM\Table(name: 'utilisateurs')]
+class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface 
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column]
+    #[ORM\Column(type: 'integer')]
     private ?int $id = null;
 
     #[ORM\Column(length: 255, unique: true)]
-    #[Assert\NotBlank(message: "l'email est obligatoire")]
+    #[Assert\NotBlank(message: "L'email est obligatoire")]
+    #[Assert\Email(message: "Email invalide")]
     private ?string $email = null;
 
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank(message: "Le mot de passe est obligatoire")]
     private ?string $password = null;
 
-    #[ORM\Column(length: 50)]
-    #[Assert\NotBlank(message: "Le roles est obligatoire")]
-    private ?string $roles = null;
+    #[ORM\Column(type: 'json')]
+    private array $roles = [];
 
-    #[ORM\Column]
+    #[ORM\Column(type: 'datetime_immutable')]
     #[Assert\NotNull(message: "La date de création est obligatoire")]
-    private ?\DateTimeImmutable $createAt = null;
-   //Un utilisateur peut posséder plusieurs voitures
-   //OneToMany
+    private ?\DateTimeImmutable $createdAt = null;
+
     #[ORM\OneToMany(mappedBy: 'utilisateur', targetEntity: Car::class)]
     private Collection $cars;
 
-    public function __construct()       //initialise une collection vide
+    public function __construct()
     {
         $this->cars = new ArrayCollection();
+        $this->createdAt = new \DateTimeImmutable();
     }
-
 
     public function getId(): ?int
     {
@@ -55,7 +57,6 @@ class Utilisateur
     public function setEmail(string $email): static
     {
         $this->email = $email;
-
         return $this;
     }
 
@@ -67,35 +68,51 @@ class Utilisateur
     public function setPassword(string $password): static
     {
         $this->password = $password;
-
         return $this;
     }
 
-    public function getRoles(): ?string
+    public function getRoles(): array
     {
-        return $this->roles;
+        return $this->roles ?: ['ROLE_USER'];
     }
 
-    public function setRoles(string $roles): static
+    public function setRoles(array $roles): static
     {
         $this->roles = $roles;
-
         return $this;
     }
 
-    public function getCreateAt(): ?\DateTimeImmutable
+    public function getCreatedAt(): ?\DateTimeImmutable
     {
-        return $this->createAt;
+        return $this->createdAt;
     }
 
-    public function setCreateAt(\DateTimeImmutable $createAt): static
+    public function setCreatedAt(\DateTimeImmutable $createdAt): static
     {
-        $this->createAt = $createAt;
-
+        $this->createdAt = $createdAt;
         return $this;
     }
+
     public function getCars(): Collection
     {
         return $this->cars;
+    }
+
+    // Méthodes obligatoires pour UserInterface
+   
+    public function getUserIdentifier(): string
+    {
+        return (string) $this->email;
+    }
+
+    public function eraseCredentials(): void
+    {
+        // Si tu avais un champ temporaire pour mot de passe en clair, tu pourrais l'effacer ici
+    }
+
+    public function getSalt(): ?string
+    {
+        // Pas nécessaire avec bcrypt/argon2
+        return null;
     }
 }
