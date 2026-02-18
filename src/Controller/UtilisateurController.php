@@ -8,11 +8,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
- #[IsGranted('ROLE_USER')]
 final class UtilisateurController extends AbstractController
 {
     public function __construct(private UtilisateurService $utilisateurService) {}
@@ -24,18 +21,27 @@ final class UtilisateurController extends AbstractController
     {
         /** @var \App\Entity\Utilisateur $user */
         $user = $this->getUser();
+        if (!$user) {
+            return $this->json(['message' => 'utilisateur non trouvé'], 404);
+        }
 
         return $this->json($this->utilisateurService->formatUtilisateur($user));
     }
  // mettre à jour son profil
  #[Route('/api/profile',name: 'api_profile_update', methods: ['PUT'])]
- public function update(Request $request): JsonResponse
+ public function update(Request $request, EntityManagerInterface $em): JsonResponse
  {
   /** @var \App\Entity\Utilisateur $user */
   $user = $this->getUser();
+  if (!$user) {
+    return $this->json(['message' => 'utilisateur non trouvé'], 404);
+  }
   $data = json_decode($request->getContent(), true);
-
+  
    $user = $this->utilisateurService->updateProfile($user, $data);
+    $em->persist($user);
+    $em->flush();
+ 
    return $this->json(['message' => 'profil mis à jour avec succés']);
  }
  // supprimer son compte
@@ -50,7 +56,4 @@ final class UtilisateurController extends AbstractController
 
     return $this->json(['message' => 'Compte supprimé']);
  }
-
-
- 
 }

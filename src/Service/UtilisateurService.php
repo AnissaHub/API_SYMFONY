@@ -13,7 +13,7 @@ class UtilisateurService
         private UserPasswordHasherInterface $passwordHasher
     ) {}
 
-    // Vérifie si un email existe déjà
+    // Vérifie si un email existe déjà ()
      
     public function emailExiste(string $email): bool
     {
@@ -28,10 +28,7 @@ class UtilisateurService
         $user->setEmail($data['email']);
         $user->setRoles($data['roles'] ?? ['ROLE_USER']);
 
-        $hashedPassword = $this->passwordHasher->hashPassword(
-            $user,
-            $data['password']
-        );
+        $hashedPassword = $this->passwordHasher->hashPassword($user, $data['password'] );
 
         $user->setPassword($hashedPassword);
 
@@ -76,6 +73,7 @@ class UtilisateurService
         $hashedPassword = $this->passwordHasher->hashPassword($user, $data['password']);
         $user->setPassword($data['password']);
       }
+      $user->setPassword($hashedPassword);
        return $user;
    }
 

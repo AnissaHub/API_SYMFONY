@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Repository\CarRepository;
 use App\Repository\UtilisateurRepository;
 use App\Service\CarService;
+use App\Entity\Utilisateur;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
@@ -12,72 +13,60 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
-use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[IsGranted('ROLE_USER')]
 
 final class CarController extends AbstractController
 {
     public function __construct(
     private CarService $carService,
-    private CarRepository $carRepository,
-    private UtilisateurRepository $utilisateurRepository
-) {}
+    private UtilisateurRepository $utilisateurRepository) {}
 
  //liste
    #[Route('/api/cars', methods: ['GET'])]
    public function index(): JsonResponse
- {
-   
+   {
     $user = $this->getUser();   
    
-
   /*On récupère l’utilisateur actuellement connecté.
   $this : l’objet courant (souvent un contrôleur Symfony)
    getUser() : méthode Symfony qui retourne l’utilisateur authentifié*/
-
+  if(!$user){
+    return $this->json(['error'=>'Utilisateur non connecté'], 403);
+  }
 
  if (in_array('ROLE_ADMIN', $user->getRoles())) {
     $cars = $this->carService->getAllCars();
     } else {
     $cars = $this->carService->getCarsForUser($user);
    }
-   
-        return $this->json(['data' => $cars]);
- }
+    return $this->json(['data' => $cars]); 
+   }
 
  // détail
- #[Route('/api/cars/{immatriculation}', methods: ['GET'])]
- public function show(string $immatriculation): JsonResponse
- {
-    $user = $this->getUser();
+  #[Route('/api/cars/{immatriculation}', methods: ['GET'])]
+  public function show(string $immatriculation): JsonResponse
+  {
 
-    if (in_array('ROLE_ADMIN', $user->getRoles(), true)) {
-        // Admin : voit toutes les voitures
-        $car = $this->carService->getCarByImmatriculationEntity($immatriculation);
-    } else {
-        // User : voit uniquement ses voitures
-        $car = $this->carService->getCarByImmatriculationForUser(
-            $immatriculation,
-            $user
-        );
-    }
-
+    $car = $this->carService->getCarByImmatriculationEntity($immatriculation);
     if (!$car) {
         return $this->json(['error' => 'Voiture non trouvée'], 404);
     }
 
-    return $this->json(
-        $this->carService->formatCar($car)
-    );
+    // Voter pour vérifier l'accès
+    $this->denyAccessUnlessGranted('CAR_VIEW', $car);
+
+    return $this->json([
+        'data' => $this->carService->formatCar($car)
+    ]);
  }
 
 
-  //Création
+
+ //Création
    
-  #[Route('/api/cars', name: 'api_car_create', methods: ['POST'])]
-public function create(Request $request, EntityManagerInterface $em, ValidatorInterface $validator): JsonResponse
-{
+ #[Route('/api/cars', name: 'api_car_create', methods: ['POST'])]
+ public function create(Request $request, EntityManagerInterface $em, ValidatorInterface $validator): JsonResponse
+ {
     /** @var \App\Entity\Utilisateur $user */
     $user = $this->getUser();
 
@@ -89,8 +78,6 @@ public function create(Request $request, EntityManagerInterface $em, ValidatorIn
     }
 
     $owner = $user;
-
-    if (isset($data['utilisateur_id'])) {
 
         if (
             !$this->isGranted('ROLE_ADMIN') &&
@@ -106,7 +93,7 @@ public function create(Request $request, EntityManagerInterface $em, ValidatorIn
                 return $this->json(['message' => 'Utilisateur non trouvé'], 404);
             }
         }
-    }
+    
 
     //  On force l'utilisateur final
     $data['utilisateur_id'] = $owner->getId();
@@ -130,7 +117,7 @@ public function create(Request $request, EntityManagerInterface $em, ValidatorIn
     {
         
         /** @var \App\Entity\Utilisateur $user */
-         $user = $this->getUser();
+        
         $data = json_decode($request->getContent(), true);
 
         $car = $this->carService->getCarByImmatriculationEntity($immatriculation);
@@ -138,12 +125,8 @@ public function create(Request $request, EntityManagerInterface $em, ValidatorIn
         if (!$car) {
             return $this->json(['message' => 'Voiture non trouvée'], 404);
         }
-        if (
-            !$this->isGranted('ROLE_ADMIN') &&
-            $data['utilisateur_id'] != $user->getId()
-        ) {
-            return $this->json(['message' => 'Accès interdit'], 403);
-        }
+         // Voter pour vérifier l'accès
+          $this->denyAccessUnlessGranted('CAR_EDIT', $car);
           
         $this->carService->updateCar($car, $data);
         $errors = $validator->validate($car);
@@ -165,19 +148,15 @@ public function create(Request $request, EntityManagerInterface $em, ValidatorIn
      public function updateEtat(string $immatriculation, Request $request, EntityManagerInterface $em, ValidatorInterface $validator): JsonResponse
      {
           /** @var \App\Entity\Utilisateur $user */
-         $user = $this->getUser();
+        
         $data = json_decode($request->getContent(), true);
 
         $car = $this->carService->getCarByImmatriculationEntity($immatriculation);
         if (!$car) {
             return $this->json(['message' => 'Voiture non trouvée'], 404);
         }
-         if (
-      !in_array('ROLE_ADMIN', $user->getRoles()) &&
-      $car->getUtilisateur()->getId() !== $user->getId()
-      ) {
-         return $this->json(['message' => 'Accès interdit'], 403);
-       }
+        // Voter pour vérifier l'accès
+        $this->denyAccessUnlessGranted('CAR_EDIT', $car);
 
         $this->carService->updateEtat($car, $data);
           $errors = $validator->validate($car);
@@ -197,10 +176,11 @@ public function create(Request $request, EntityManagerInterface $em, ValidatorIn
      Cela permet d’afficher correctement toutes les informations, notamment les dates, même si on a modifié seulement l’état */
 
   #[Route('/api/cars/{immatriculation}', methods: ['DELETE'])]
-public function delete(string $immatriculation, EntityManagerInterface $em): JsonResponse
-{
+ public function delete(string $immatriculation, EntityManagerInterface $em): JsonResponse
+ {
     /** @var \App\Entity\Utilisateur $user */
-    $user = $this->getUser();
+    
+
 
     $immatriculation = trim($immatriculation); // nettoyage
     $car = $this->carService->getCarByImmatriculationEntity($immatriculation);
@@ -209,9 +189,9 @@ public function delete(string $immatriculation, EntityManagerInterface $em): Jso
         return $this->json(['message' => 'Voiture non trouvée'], 404);
     }
 
-    if (!$this->isGranted('ROLE_ADMIN') && $car->getUtilisateur() !== $user) {
-        return $this->json(['message' => 'Accès interdit'], 403);
-    }
+    // Voter pour vérifier l'accès
+        $this->denyAccessUnlessGranted('CAR_DELETE', $car);
+
 
     $em->remove($car);
     $em->flush();

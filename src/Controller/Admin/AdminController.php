@@ -27,7 +27,7 @@ class AdminController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
 
-    // Appel du service pour créer l'utilisateur
+    //vérifier que les champs sont remplis et que email il est unique 
     if (empty($data['email']) || empty($data['password'])) {
             return new JsonResponse(['error' => 'Email et mot de passe requis'], 400);
         }
@@ -35,12 +35,9 @@ class AdminController extends AbstractController
         if ($this->utilisateurService->emailExiste($data['email'])) {
             return new JsonResponse(['error' => 'Email déjà utilisé'], 409);
         }
-
-        $user = $this->utilisateurService->createUtilisateur([
-            'email' => $data['email'],
-            'password' => $data['password'],
-            'roles' => ['ROLE_USER'],
-        ]);
+        
+       // Appel du service pour créer l'utilisateur
+        $user = $this->utilisateurService->createUtilisateur($data);
 
         $this->em->persist($user);
         $this->em->flush();
@@ -56,8 +53,7 @@ class AdminController extends AbstractController
     public function index(): JsonResponse
     {
         $users = $this->utilisateurService->getAllUsers(); // Service renvoie le tableau prêt pour JSON
-        return $this->
-        json($users);
+        return $this-> json($users);
     }
     //afficher un user par son id
      #[Route('/users/{id}', name: 'admin_user_', methods: ['GET'])]
@@ -92,8 +88,8 @@ class AdminController extends AbstractController
      }
     
      //modification des roles
-    #[Route('/api/users/{id}/roles', name: 'admin_roles_modif', methods: ['PAtCH'])]
-    public function update(int $id, Request $request, EntityManagerInterface $em): JsonResponse
+    #[Route('/users/{id}/roles', name: 'admin_roles_modif', methods: ['PATCH'])]
+    public function updateRoles(int $id, Request $request, EntityManagerInterface $em): JsonResponse
    {
        $data = json_decode($request->getContent(), true);
 
@@ -110,4 +106,24 @@ class AdminController extends AbstractController
      'user' => $this->utilisateurService->formatUtilisateur($user) ], 200);    // Retourne l’objet formaté et un message de succès.
        
     }
+    //modification d'un utilisateur
+    #[Route('/users/{id}', name: 'admin_modif', methods: ['PUT'])]
+    public function update(int $id, Request $request, EntityManagerInterface $em): JsonResponse
+   {
+       $data = json_decode($request->getContent(), true);
+
+       $user = $this->utilisateurService->getUtilisateurById($id);
+       if (!$user)
+       {
+         return $this->json(['message' => 'utilisateur non trouvé'], 404);
+       }
+       $this->utilisateurService->updateProfile($user, $data);
+    
+       $em->flush();
+      return $this->json([
+     'message' => 'utilisateur mis à jour avec succès',
+     'user' => $this->utilisateurService->formatUtilisateur($user) ], 200);    // Retourne l’objet formaté et un message de succès.
+       
+    }
+
 }

@@ -14,17 +14,22 @@ class CarService
         private UtilisateurRepository $utilisateurRepository
     ) {}
 
-    //LISTES
+    //LISTE
     //Retourne toutes les voitures appartenant à un utilisateur
    public function getCarsForUser(Utilisateur $user): array
-    {
-     return $this->carRepository->findBy(['utilisateur' => $user]);
-    }
+{
+    return array_map(                     //array_map Cette fonction applique une transformation à chaque élément du tableau.
+        [$this, 'formatCar'],             // appelle la méthode formatCar() pour chaque voiture
+        $this->carRepository->findBy(['utilisateur' => $user])
+    );
+}
+
 
 
     public function getAllCars(): array
     {
-        return array_map([$this, 'formatCar'], $this->carRepository->findAll());
+        return array_map([$this, 'formatCar'], $this->carRepository->findAll()); //Applique formatCar() à chaque objet pour transformer en tableau.
+
     }
 
     public function getCarsByMarque(string $marque): array
@@ -57,8 +62,8 @@ class CarService
     }
 
      public function getCarByImmatriculationForUser(
-    string $immatriculation, Utilisateur $user): ?Car
-    {
+     string $immatriculation, Utilisateur $user): ?Car
+     {
          return $this->carRepository->findOneBy([
         'immatriculation' => $immatriculation,
         'utilisateur' => $user
@@ -181,4 +186,5 @@ class CarService
             'utilisateur_id'  => $car->getUtilisateur()?->getId(),
         ];
     }
-}
+}²²
+

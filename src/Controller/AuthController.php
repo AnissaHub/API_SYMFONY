@@ -58,7 +58,7 @@ final class AuthController extends AbstractController
         $email = $data['email'] ?? '';
         $password = $data['password'] ?? '';
 
-        // Récupérer l'entité Utilisateur (pas un tableau)
+        // Récupérer l'entité Utilisateur 
         $user = $this->utilisateurService->getUtilisateurEntityByEmail($email);
 
         if (!$user || !$this->passwordHasher->isPasswordValid($user, $password)) {
