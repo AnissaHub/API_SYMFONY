@@ -186,5 +186,4 @@ class CarService
             'utilisateur_id'  => $car->getUtilisateur()?->getId(),
         ];
     }
-}²²
-
+}
