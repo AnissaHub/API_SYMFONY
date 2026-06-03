@@ -14,22 +14,19 @@ class CarService
         private UtilisateurRepository $utilisateurRepository
     ) {}
 
-    //LISTE
-    //Retourne toutes les voitures appartenant à un utilisateur
-   public function getCarsForUser(Utilisateur $user): array
-{
-    return array_map(                     //array_map Cette fonction applique une transformation à chaque élément du tableau.
-        [$this, 'formatCar'],             // appelle la méthode formatCar() pour chaque voiture
-        $this->carRepository->findBy(['utilisateur' => $user])
-    );
-}
+    // ── LISTE ────────────────────────────────────────
 
-
+    public function getCarsForUser(Utilisateur $user): array
+    {
+        return array_map(
+            [$this, 'formatCar'],
+            $this->carRepository->findBy(['utilisateur' => $user])
+        );
+    }
 
     public function getAllCars(): array
     {
-        return array_map([$this, 'formatCar'], $this->carRepository->findAll()); //Applique formatCar() à chaque objet pour transformer en tableau.
-
+        return array_map([$this, 'formatCar'], $this->carRepository->findAll());
     }
 
     public function getCarsByMarque(string $marque): array
@@ -48,7 +45,7 @@ class CarService
         );
     }
 
-    //DÉTAIL
+    // ── DÉTAIL ───────────────────────────────────────
 
     public function getCarByImmatriculation(string $immatriculation): ?array
     {
@@ -61,18 +58,17 @@ class CarService
         return $this->carRepository->findOneBy(['immatriculation' => $immatriculation]);
     }
 
-     public function getCarByImmatriculationForUser(
-     string $immatriculation, Utilisateur $user): ?Car
-     {
-         return $this->carRepository->findOneBy([
-        'immatriculation' => $immatriculation,
-        'utilisateur' => $user
-       ]);
+    public function getCarByImmatriculationForUser(
+        string $immatriculation,
+        Utilisateur $user
+    ): ?Car {
+        return $this->carRepository->findOneBy([
+            'immatriculation' => $immatriculation,
+            'utilisateur' => $user
+        ]);
     }
 
-
-      // CRÉATION
-  
+    // ── CRÉATION ─────────────────────────────────────
 
     public function createCar(array $data): Car
     {
@@ -89,30 +85,18 @@ class CarService
         $car->setImmatriculation($data['immatriculation']);
         $car->setMarque($data['marque']);
         $car->setModele($data['modele']);
-        $car->setEtat($data['etat']);
+        $car->setEtat($data['etat'] ?? 'en_stock');
         $car->setUtilisateur($utilisateur);
         $car->setAnnee($data['annee'] ?? null);
         $car->setCouleur($data['couleur'] ?? null);
-        $car->setObservations($data['observations'] ?? null);
+        $car->setKilometrage($data['kilometrage'] ?? null);
+        $car->setPrix($data['prix'] ?? null);
+        $car->setDescription($data['description'] ?? null);
 
-        // Dates sécurisées
-        $car->setDateEntree(
-            isset($data['dateEntree'])
-                ? new \DateTime($data['dateEntree'])
-                : new \DateTime()
-        );
-
-        if (!empty($data['dateSortie'])) {
-            $car->setDateSortie(new \DateTime($data['dateSortie']));
-        } else {
-            $car->setDateSortie(null);
-        }
         return $car;
     }
 
-   
-       //MISE À JOUR
-   
+    // ── MISE À JOUR ──────────────────────────────────
 
     public function updateCar(Car $car, array $data): void
     {
@@ -131,19 +115,9 @@ class CarService
 
         $car->setAnnee($data['annee'] ?? $car->getAnnee());
         $car->setCouleur($data['couleur'] ?? $car->getCouleur());
-        $car->setObservations($data['observations'] ?? $car->getObservations());
-
-        if (isset($data['dateEntree'])) {
-            $car->setDateEntree(new \DateTime($data['dateEntree']));
-        }
-
-        if (array_key_exists('dateSortie', $data)) {
-            $car->setDateSortie(
-                $data['dateSortie']
-                    ? new \DateTime($data['dateSortie'])
-                    : null
-            );
-        }
+        $car->setKilometrage($data['kilometrage'] ?? $car->getKilometrage());
+        $car->setPrix($data['prix'] ?? $car->getPrix());
+        $car->setDescription($data['description'] ?? $car->getDescription());
 
         if (isset($data['utilisateur_id'])) {
             $utilisateur = $this->utilisateurRepository->find($data['utilisateur_id']);
@@ -153,36 +127,29 @@ class CarService
         }
     }
 
-    
-       //PATCH ÉTAT
-    
+    // ── PATCH ÉTAT ───────────────────────────────────
 
     public function updateEtat(Car $car, array $data): void
     {
         if (!isset($data['etat'])) {
             throw new \InvalidArgumentException('État manquant');
         }
-
         $car->setEtat($data['etat']);
     }
 
-
-       //FORMAT JSON
-    
+    // ── FORMAT JSON ──────────────────────────────────
 
     public function formatCar(Car $car): array
     {
-
         return [
             'immatriculation' => $car->getImmatriculation(),
             'marque'          => $car->getMarque(),
             'modele'          => $car->getModele(),
             'annee'           => $car->getAnnee(),
             'couleur'         => $car->getCouleur(),
+            'kilometrage'     => $car->getKilometrage(),
             'etat'            => $car->getEtat(),
-            'dateEntree'      => $car->getDateEntree()?->format('Y-m-d H:i:s'),
-            'dateSortie'      => $car->getDateSortie()?->format('Y-m-d H:i:s'),
-            'observations'    => $car->getObservations(),
+            'description'     => $car->getDescription(),
             'utilisateur_id'  => $car->getUtilisateur()?->getId(),
         ];
     }

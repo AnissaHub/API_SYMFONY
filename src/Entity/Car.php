@@ -3,7 +3,6 @@
 namespace App\Entity;
 
 use App\Repository\CarRepository;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -36,35 +35,28 @@ class Car
     #[Assert\Positive(message: "L'année doit être positive")]
     private ?int $annee = null;
 
+    #[ORM\Column(nullable: true)]
+    #[Assert\PositiveOrZero(message: "Le kilométrage doit être positif")]
+    private ?int $kilometrage = null;
+
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $couleur = null;
 
+    #[ORM\Column(type: 'decimal', precision: 10, scale: 2)]
+    #[Assert\NotNull(message: "Le prix est obligatoire")]
+    #[Assert\Positive(message: "Le prix doit être positif")]
+    private ?float $prix = null;
+
     #[ORM\Column(length: 50)]
     #[Assert\Choice(
-        choices: [
-            'pris_en_charge',
-            'diagnostic',
-            'attente_pieces',
-            'en_reparation',
-            'pret',
-            'livre'
-        ],
+        choices: ['en_stock', 'reservee', 'vendue'],
         message: "État invalide"
     )]
-    private string $etat;
+    private string $etat = 'en_stock';
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
-    #[Assert\NotNull(message: "La date d'entrée est obligatoire")]
-    private \DateTimeInterface $dateEntree;
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $description = null;
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
-    private ?\DateTimeInterface $dateSortie = null;
-
-    #[ORM\Column(type: Types::TEXT, nullable: true)]
-    private ?string $observations = null;
-
-    // Relation ManyToOne
-    #[Assert\NotNull(message: "L'utilisateur est obligatoire")]
     #[ORM\ManyToOne(targetEntity: Utilisateur::class, inversedBy: 'cars')]
     #[ORM\JoinColumn(
         name: 'utilisateur_id',
@@ -74,12 +66,14 @@ class Car
     )]
     private ?Utilisateur $utilisateur = null;
 
+    // ── Getters / Setters ────────────────────────────
+
     public function getId(): ?int
     {
         return $this->id;
     }
 
-    public function getImmatriculation(): ?string
+    public function getImmatriculation(): string
     {
         return $this->immatriculation;
     }
@@ -90,7 +84,7 @@ class Car
         return $this;
     }
 
-    public function getMarque(): ?string
+    public function getMarque(): string
     {
         return $this->marque;
     }
@@ -101,7 +95,7 @@ class Car
         return $this;
     }
 
-    public function getModele(): ?string
+    public function getModele(): string
     {
         return $this->modele;
     }
@@ -123,6 +117,17 @@ class Car
         return $this;
     }
 
+    public function getKilometrage(): ?int
+    {
+        return $this->kilometrage;
+    }
+
+    public function setKilometrage(?int $kilometrage): static
+    {
+        $this->kilometrage = $kilometrage;
+        return $this;
+    }
+
     public function getCouleur(): ?string
     {
         return $this->couleur;
@@ -134,7 +139,18 @@ class Car
         return $this;
     }
 
-    public function getEtat(): ?string
+    public function getPrix(): ?float
+    {
+        return $this->prix;
+    }
+
+    public function setPrix(?float $prix): static
+    {
+        $this->prix = $prix;
+        return $this;
+    }
+
+    public function getEtat(): string
     {
         return $this->etat;
     }
@@ -145,36 +161,14 @@ class Car
         return $this;
     }
 
-    public function getDateEntree(): ?\DateTimeInterface
+    public function getDescription(): ?string
     {
-        return $this->dateEntree;
+        return $this->description;
     }
 
-    public function setDateEntree(\DateTimeInterface $dateEntree): static
+    public function setDescription(?string $description): static
     {
-        $this->dateEntree = $dateEntree;
-        return $this;
-    }
-
-    public function getDateSortie(): ?\DateTimeInterface
-    {
-        return $this->dateSortie;
-    }
-
-    public function setDateSortie(?\DateTimeInterface $dateSortie): static
-    {
-        $this->dateSortie = $dateSortie;
-        return $this;
-    }
-
-    public function getObservations(): ?string
-    {
-        return $this->observations;
-    }
-
-    public function setObservations(?string $observations): static
-    {
-        $this->observations = $observations;
+        $this->description = $description;
         return $this;
     }
 
