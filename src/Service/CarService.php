@@ -148,6 +148,7 @@ class CarService
             'annee'           => $car->getAnnee(),
             'couleur'         => $car->getCouleur(),
             'kilometrage'     => $car->getKilometrage(),
+            'prix'            => $car->getPrix(),
             'etat'            => $car->getEtat(),
             'description'     => $car->getDescription(),
             'utilisateur_id'  => $car->getUtilisateur()?->getId(),
