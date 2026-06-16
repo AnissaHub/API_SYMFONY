@@ -12,7 +12,7 @@ use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 
 #[ORM\Entity(repositoryClass: UtilisateurRepository::class)]
 #[ORM\Table(name: 'utilisateurs')]
-class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface 
+class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -38,9 +38,14 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(mappedBy: 'utilisateur', targetEntity: Car::class)]
     private Collection $cars;
 
+    // Relation commandes
+    #[ORM\OneToMany(mappedBy: 'utilisateur', targetEntity: Commande::class)]
+    private Collection $commandes;
+
     public function __construct()
     {
         $this->cars = new ArrayCollection();
+        $this->commandes = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
     }
 
@@ -53,7 +58,6 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     {
         return $this->email;
     }
-
     public function setEmail(string $email): static
     {
         $this->email = $email;
@@ -64,7 +68,6 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     {
         return $this->password;
     }
-
     public function setPassword(string $password): static
     {
         $this->password = $password;
@@ -75,7 +78,6 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     {
         return $this->roles ?: ['ROLE_USER'];
     }
-
     public function setRoles(array $roles): static
     {
         $this->roles = $roles;
@@ -86,7 +88,6 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     {
         return $this->createdAt;
     }
-
     public function setCreatedAt(\DateTimeImmutable $createdAt): static
     {
         $this->createdAt = $createdAt;
@@ -98,21 +99,21 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->cars;
     }
 
-    // Méthodes obligatoires pour UserInterface
-   
+    // Getter commandes
+    public function getCommandes(): Collection
+    {
+        return $this->commandes;
+    }
+
     public function getUserIdentifier(): string
     {
         return (string) $this->email;
     }
 
-    public function eraseCredentials(): void
-    {
-        // Si tu avais un champ temporaire pour mot de passe en clair, tu pourrais l'effacer ici
-    }
+    public function eraseCredentials(): void {}
 
     public function getSalt(): ?string
     {
-        // Pas nécessaire avec bcrypt/argon2
         return null;
     }
 }
